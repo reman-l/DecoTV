@@ -98,12 +98,43 @@
 
 本项目**仅支持 Docker 或其他基于 Docker 的平台** 部署。
 
+### 📦 Docker 镜像标签
+
+DecoTV 提供以下 Docker 镜像标签：
+
+| 标签     | 说明         | 使用场景                         |
+| -------- | ------------ | -------------------------------- |
+| `latest` | 最新构建版本 | 总是使用最新代码，包含所有小更新 |
+| `v0.4.0` | 特定版本号   | 固定版本部署，便于版本管理和回滚 |
+
+**推荐使用方式**：
+
+```bash
+# 方式1：使用 latest 标签（自动获取最新更新）
+docker pull ghcr.io/decohererk/decotv:latest
+
+# 方式2：使用特定版本号（生产环境推荐）
+docker pull ghcr.io/decohererk/decotv:v0.4.0
+
+# 方式3：回滚到旧版本
+docker pull ghcr.io/decohererk/decotv:v0.3.0
+```
+
+**版本号标签优势**：
+
+- ✅ 清楚知道运行的版本，方便对比 GitHub 最新版
+- ✅ 可以固定版本号，避免意外更新影响生产环境
+- ✅ 支持版本回滚，遇到问题可快速恢复到旧版本
+- ✅ 便于团队协作时统一环境版本
+
+> **注意**：使用 `latest` 标签时，重启容器不会自动拉取新镜像，需要手动执行 `docker pull` 才能获取更新。使用版本号标签可以明确控制何时更新。
+
 ### Kvrocks 存储（推荐）
 
 ```yml
 services:
   decotv-core:
-    image: ghcr.io/decohererk/decotv:latest
+    image: ghcr.io/decohererk/decotv:latest # 或使用 :v0.4.0 固定版本
     container_name: decotv-core
     restart: on-failure
     ports:
@@ -137,7 +168,7 @@ volumes:
 ```yml
 services:
   decotv-core:
-    image: ghcr.io/decohererk/decotv:latest
+    image: ghcr.io/decohererk/decotv:latest # 或使用 :v0.4.0 固定版本
     container_name: decotv-core
     restart: on-failure
     ports:
@@ -174,7 +205,7 @@ networks:
 ```yml
 services:
   decotv-core:
-    image: ghcr.io/decohererk/decotv:latest
+    image: ghcr.io/decohererk/decotv:latest # 或使用 :v0.4.0 固定版本
     container_name: decotv-core
     restart: on-failure
     ports:

@@ -9,12 +9,14 @@
 - ✨ 添加 OPTIONS 方法处理 CORS 预检请求
 - 📝 新增 OrionTV 使用指南文档
 - 🔐 支持 Cookie-based 认证（OrionTV 兼容）
+- 🐳 Docker 镜像添加版本号标签（如 v0.4.0），支持版本固定和回滚
 
 ### Changed
 
 - 🎨 更新 OrionTV 使用指南，说明正确的配置方式
 - ⚡ 优化 API 响应头，添加完整 CORS 支持
 - 📚 完善 LunaTV 兼容 API 文档
+- 📦 优化 Docker 部署文档，添加版本标签使用说明
 
 ### Fixed
 
@@ -28,6 +30,7 @@
 - 🔄 播放记录、收藏、搜索历史在 OrionTV 和 Web 端实时同步
 - 📱 支持 Apple TV 和 Android TV 平台
 - 🌐 完整的多设备数据同步支持
+- 🔧 GitHub Actions 自动为每个版本生成对应的 Docker 标签
 
 ## [0.2.0] - 2025-10-05
 
