@@ -128,8 +128,28 @@ export async function GET(req: NextRequest) {
 
     const forceSpiderRefresh = searchParams.get('forceSpiderRefresh') === '1';
 
-    // 高可用 JAR 策略：智能选择 + 多重备选 + 错误处理
-    const jarInfo = await getSpiderJar(forceSpiderRefresh);
+    // 高可用 JAR 策略：智能选择 + 多重备选 + 错误处理 + 超时控制
+    let jarInfo;
+    try {
+      // 添加 5 秒超时限制，避免 OrionTV 等待过久
+      jarInfo = await Promise.race([
+        getSpiderJar(forceSpiderRefresh),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Spider JAR timeout')), 5000)
+        ),
+      ]);
+    } catch (err) {
+      console.warn('[TVBox] Spider JAR fetch timeout/failed:', err);
+      // 超时或失败时使用默认备选
+      jarInfo = {
+        success: false,
+        source: 'fallback',
+        md5: 'e53eb37c4dc3dce1c8ee0c996ca3a024',
+        buffer: null,
+        cached: false,
+      };
+    }
+
     let globalSpiderJar: string;
 
     if (jarInfo.success && jarInfo.source !== 'fallback') {

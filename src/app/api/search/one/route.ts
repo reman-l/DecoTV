@@ -65,7 +65,14 @@ export async function GET(request: NextRequest) {
           error: '未找到结果',
           result: null,
         },
-        { status: 404 }
+        {
+          status: 404,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Cookie',
+          },
+        }
       );
     } else {
       return NextResponse.json(
@@ -76,6 +83,9 @@ export async function GET(request: NextRequest) {
             'CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
             'Vercel-CDN-Cache-Control': `public, s-maxage=${cacheTime}`,
             'Netlify-Vary': 'query',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Cookie',
           },
         }
       );
@@ -86,7 +96,27 @@ export async function GET(request: NextRequest) {
         error: '搜索失败',
         result: null,
       },
-      { status: 500 }
+      {
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Cookie',
+        },
+      }
     );
   }
+}
+
+// CORS 预检请求
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Cookie',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
 }
