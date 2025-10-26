@@ -718,3 +718,16 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// 处理 CORS 预检请求 (OrionTV 1.3.11+ 可能需要)
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'access-control-allow-origin': '*',
+      'access-control-allow-methods': 'GET, OPTIONS',
+      'access-control-allow-headers': 'Content-Type',
+      'access-control-max-age': '86400',
+    },
+  });
+}
