@@ -1,3 +1,34 @@
+## [0.4.0] - 2025-01-26
+
+### Added
+
+- ✨ 完整支持 OrionTV 1.3.11 客户端
+- ✨ 添加 `/api/search/resources` API 获取视频源列表
+- ✨ 添加 `/api/search/one` API 在指定源搜索视频
+- ✨ 完整的 CORS 支持（OrionTV 兼容）
+- ✨ 添加 OPTIONS 方法处理 CORS 预检请求
+- 📝 新增 OrionTV 使用指南文档
+- 🔐 支持 Cookie-based 认证（OrionTV 兼容）
+
+### Changed
+
+- 🎨 更新 OrionTV 使用指南，说明正确的配置方式
+- ⚡ 优化 API 响应头，添加完整 CORS 支持
+- 📚 完善 LunaTV 兼容 API 文档
+
+### Fixed
+
+- 🐛 修复 `/api/search/resources` 缺少认证检查的问题
+- 🐛 修复 `/api/search/one` 缺少 CORS 头的问题
+- 🔧 修复 OrionTV 1.3.11 "网络错误" 提示
+
+### Technical
+
+- 🏗️ 同时支持 OrionTV API 和 TVBox 配置两种模式
+- 🔄 播放记录、收藏、搜索历史在 OrionTV 和 Web 端实时同步
+- 📱 支持 Apple TV 和 Android TV 平台
+- 🌐 完整的多设备数据同步支持
+
 ## [0.2.0] - 2025-10-05
 
 ### Added
