@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthInfoFromCookie } from '@/lib/auth';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
+import { rankSearchResults } from '@/lib/search-ranking';
 import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
@@ -61,6 +62,10 @@ export async function GET(request: NextRequest) {
         return !yellowWords.some((word: string) => typeName.includes(word));
       });
     }
+
+    // 🎯 智能排序：按相关性对搜索结果排序
+    flattenedResults = rankSearchResults(flattenedResults, query);
+
     const cacheTime = await getCacheTime();
 
     if (flattenedResults.length === 0) {
