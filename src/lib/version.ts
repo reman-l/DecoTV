@@ -4,7 +4,7 @@
  */
 
 // 版本常量
-const CURRENT_SEMANTIC_VERSION = '0.4.0';
+const CURRENT_SEMANTIC_VERSION = '0.5.0';
 export const CURRENT_VERSION = CURRENT_SEMANTIC_VERSION;
 
 export interface VersionInfo {
