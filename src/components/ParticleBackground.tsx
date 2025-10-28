@@ -71,32 +71,6 @@ export default function ParticleBackground() {
       });
     }
 
-    // 获取主题渐变色 - 根据亮暗模式调整
-    const isDarkMode =
-      typeof window !== 'undefined' &&
-      document.documentElement.classList.contains('dark');
-
-    const theme = (() => {
-      const h = themeConfig.hue;
-      const s = themeConfig.saturation;
-
-      if (isDarkMode) {
-        // 暗色模式：深色背景
-        return {
-          a: `hsla(${h}, ${s}%, 60%, 0.09)`,
-          b: `hsla(${(h + 40) % 360}, ${s - 10}%, 55%, 0.08)`,
-          clearColor: 'rgba(0, 0, 0, 0.05)',
-        };
-      } else {
-        // 亮色模式：浅色背景，更高亮度
-        return {
-          a: `hsla(${h}, ${s - 30}%, 95%, 0.4)`,
-          b: `hsla(${(h + 40) % 360}, ${s - 35}%, 92%, 0.35)`,
-          clearColor: 'rgba(255, 255, 255, 0.1)',
-        };
-      }
-    })();
-
     const draw = (currentTime: number) => {
       // 限制帧率到 30fps，降低 50% CPU 占用
       const elapsed = currentTime - lastFrameTime.current;
@@ -105,6 +79,33 @@ export default function ParticleBackground() {
         return;
       }
       lastFrameTime.current = currentTime;
+
+      // 每一帧都检测当前主题模式，确保实时响应
+      const isDarkMode =
+        typeof window !== 'undefined' &&
+        document.documentElement.classList.contains('dark');
+
+      // 获取主题渐变色 - 根据亮暗模式调整
+      const theme = (() => {
+        const h = themeConfig.hue;
+        const s = themeConfig.saturation;
+
+        if (isDarkMode) {
+          // 暗色模式：深色背景
+          return {
+            a: `hsla(${h}, ${s}%, 60%, 0.09)`,
+            b: `hsla(${(h + 40) % 360}, ${s - 10}%, 55%, 0.08)`,
+            clearColor: 'rgba(0, 0, 0, 0.05)',
+          };
+        } else {
+          // 亮色模式：浅色背景，更高亮度
+          return {
+            a: `hsla(${h}, ${s - 30}%, 95%, 0.4)`,
+            b: `hsla(${(h + 40) % 360}, ${s - 35}%, 92%, 0.35)`,
+            clearColor: 'rgba(255, 255, 255, 0.1)',
+          };
+        }
+      })();
 
       // 使用半透明清除创建拖尾效果 - 根据主题调整
       ctx.fillStyle = theme.clearColor;
