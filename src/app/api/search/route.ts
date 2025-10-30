@@ -56,9 +56,22 @@ export async function GET(request: NextRequest) {
       .filter((result) => result.status === 'fulfilled')
       .map((result) => (result as PromiseFulfilledResult<any>).value);
     let flattenedResults = successResults.flat();
+
+    // 成人内容过滤逻辑
+    // DisableYellowFilter=false 表示启用过滤(过滤成人内容)
+    // DisableYellowFilter=true 表示禁用过滤(显示所有内容)
     if (!config.SiteConfig.DisableYellowFilter) {
       flattenedResults = flattenedResults.filter((result) => {
         const typeName = result.type_name || '';
+        const sourceKey = result.source_key || '';
+
+        // 检查视频源是否标记为成人资源
+        const source = apiSites.find((s) => s.key === sourceKey);
+        if (source && source.is_adult) {
+          return false; // 过滤掉标记为成人资源的源
+        }
+
+        // 检查分类名称是否包含敏感关键词
         return !yellowWords.some((word: string) => typeName.includes(word));
       });
     }

@@ -88,11 +88,16 @@ export async function GET(request: NextRequest) {
 
           const results = (await searchPromise) as any[];
 
-          // 过滤黄色内容
+          // 成人内容过滤
           let filteredResults = results;
           if (!config.SiteConfig.DisableYellowFilter) {
             filteredResults = results.filter((result) => {
               const typeName = result.type_name || '';
+              // 检查源是否标记为成人资源
+              if (site.is_adult) {
+                return false;
+              }
+              // 检查分类名称关键词
               return !yellowWords.some((word: string) =>
                 typeName.includes(word)
               );
