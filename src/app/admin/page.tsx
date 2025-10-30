@@ -2738,6 +2738,54 @@ const VideoSourceConfig = ({
       });
   };
 
+  // 批量标记/取消标记成人资源
+  const handleBatchMarkAdult = async (markAsAdult: boolean) => {
+    if (selectedSources.size === 0) {
+      showAlert({
+        type: 'warning',
+        title: '请先选择要操作的视频源',
+        message: '请选择至少一个视频源',
+      });
+      return;
+    }
+
+    const keys = Array.from(selectedSources);
+    const loadingKey = markAsAdult
+      ? 'batchSource_mark_adult'
+      : 'batchSource_unmark_adult';
+
+    try {
+      await withLoading(loadingKey, async () => {
+        // 逐个更新成人标记
+        for (const key of keys) {
+          await callSourceApi({
+            action: 'update_adult',
+            key,
+            is_adult: markAsAdult,
+          });
+        }
+      });
+
+      showAlert({
+        type: 'success',
+        title: markAsAdult ? '批量标记成功' : '批量取消标记成功',
+        message: `已${markAsAdult ? '标记' : '取消标记'} ${
+          keys.length
+        } 个视频源`,
+        timer: 3000,
+      });
+
+      // 重置选择状态
+      setSelectedSources(new Set());
+    } catch (err) {
+      showAlert({
+        type: 'error',
+        title: markAsAdult ? '批量标记失败' : '批量取消标记失败',
+        message: err instanceof Error ? err.message : '操作失败',
+      });
+    }
+  };
+
   // 有效性检测函数
   const handleValidateSources = async () => {
     if (!searchKeyword.trim()) {
@@ -2944,6 +2992,7 @@ const VideoSourceConfig = ({
         api: source.api,
         detail: source.detail || '',
         disabled: source.disabled || false,
+        is_adult: source.is_adult || false,
       }));
 
       // 生成文件名
@@ -3050,6 +3099,7 @@ const VideoSourceConfig = ({
             name: item.name,
             api: item.api,
             detail: item.detail || '',
+            is_adult: item.is_adult || false,
           });
 
           result.success++;
@@ -3547,6 +3597,35 @@ const VideoSourceConfig = ({
                   {isLoading('batchSource_batch_delete')
                     ? '删除中...'
                     : '批量删除'}
+                </button>
+                <button
+                  onClick={() => handleBatchMarkAdult(true)}
+                  disabled={isLoading('batchSource_mark_adult')}
+                  className={`px-3 py-1 text-sm rounded-lg transition-colors flex items-center space-x-1 ${
+                    isLoading('batchSource_mark_adult')
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white'
+                  }`}
+                  title='将选中的视频源标记为成人资源'
+                >
+                  <span className='text-base'>🔞</span>
+                  {isLoading('batchSource_mark_adult')
+                    ? '标记中...'
+                    : '标记成人'}
+                </button>
+                <button
+                  onClick={() => handleBatchMarkAdult(false)}
+                  disabled={isLoading('batchSource_unmark_adult')}
+                  className={`px-3 py-1 text-sm ${
+                    isLoading('batchSource_unmark_adult')
+                      ? buttonStyles.disabled
+                      : buttonStyles.secondary
+                  }`}
+                  title='将选中的视频源标记为普通资源'
+                >
+                  {isLoading('batchSource_unmark_adult')
+                    ? '取消中...'
+                    : '取消标记'}
                 </button>
               </div>
               <div className='hidden sm:block w-px h-6 bg-gray-300 dark:bg-gray-600 order-2'></div>
