@@ -49,7 +49,6 @@ import { getAuthInfoFromBrowserCookie } from '@/lib/auth';
 import DataMigration from '@/components/DataMigration';
 import ImportExportModal from '@/components/ImportExportModal';
 import PageLayout from '@/components/PageLayout';
-import VersionChecker from '@/components/VersionChecker';
 
 // 统一按钮样式系统
 const buttonStyles = {
@@ -6391,16 +6390,6 @@ function AdminPageClient() {
                       </div>
                     </div>
                   )}
-                </div>
-
-                {/* 版本检查器 */}
-                <div className='space-y-3 pt-4 border-t border-gray-200 dark:border-gray-700'>
-                  <div className='flex items-center mb-3'>
-                    <span className='text-sm font-medium text-gray-700 dark:text-gray-300'>
-                      版本信息与更新检查：
-                    </span>
-                  </div>
-                  <VersionChecker />
                 </div>
 
                 {/* JAR 状态监控区域 */}
