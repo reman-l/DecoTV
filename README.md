@@ -352,7 +352,35 @@ dockge/komodo 等 docker compose UI 也有自动更新功能
 
 已实现播放记录和网页端同步
 
-**详细配置指南**：[OrionTV 使用指南](./docs/OrionTV使用指南.md)
+**详细配置指南**：
+
+- 📖 [OrionTV 使用指南](./docs/OrionTV使用指南.md)
+- 🔒 [成人内容过滤使用指南](./docs/成人内容过滤使用指南.md) - **支持通过 URL 参数灵活控制成人内容过滤**
+
+**OrionTV 成人内容过滤快速配置**：
+
+<details>
+<summary>点击查看 OrionTV 过滤配置示例</summary>
+
+### 家庭安全模式（推荐家庭使用）
+
+```
+API 地址: https://your-domain.com
+```
+
+✅ 自动过滤成人资源源和敏感关键词
+
+### 完整内容模式（成人用户）
+
+```
+API 地址: https://your-domain.com?adult=1
+```
+
+✅ 显示所有内容（包括成人资源）
+
+详细说明请参阅 [成人内容过滤使用指南](./docs/成人内容过滤使用指南.md)
+
+</details>
 
 ## 🎥 TVbox 配置
 
