@@ -2968,7 +2968,7 @@ const VideoSourceConfig = ({
   };
 
   // 导出视频源
-  const handleExportSources = () => {
+  const handleExportSources = (exportFormat: 'array' | 'config' = 'array') => {
     try {
       // 获取要导出的源（如果有选中则导出选中的，否则导出全部）
       const sourcesToExport =
@@ -2985,20 +2985,52 @@ const VideoSourceConfig = ({
         return;
       }
 
-      // 创建导出数据
-      const exportData = sourcesToExport.map((source) => ({
-        name: source.name,
-        key: source.key,
-        api: source.api,
-        detail: source.detail || '',
-        disabled: source.disabled || false,
-        is_adult: source.is_adult || false,
-      }));
-
-      // 生成文件名
+      let exportData: any;
+      let filename: string;
       const now = new Date();
       const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
-      const filename = `video_sources_${timestamp}.json`;
+
+      if (exportFormat === 'config') {
+        // 配置文件格式: { api_site: { key: { name, api, detail, is_adult } } }
+        const apiSiteObj: Record<
+          string,
+          {
+            name: string;
+            api: string;
+            detail?: string;
+            is_adult?: boolean;
+          }
+        > = {};
+
+        sourcesToExport.forEach((source) => {
+          apiSiteObj[source.key] = {
+            name: source.name,
+            api: source.api,
+          };
+          if (source.detail) {
+            apiSiteObj[source.key].detail = source.detail;
+          }
+          if (source.is_adult) {
+            apiSiteObj[source.key].is_adult = source.is_adult;
+          }
+        });
+
+        exportData = {
+          api_site: apiSiteObj,
+        };
+        filename = `config_${timestamp}.json`;
+      } else {
+        // 数组格式（用于导入功能）
+        exportData = sourcesToExport.map((source) => ({
+          name: source.name,
+          key: source.key,
+          api: source.api,
+          detail: source.detail || '',
+          disabled: source.disabled || false,
+          is_adult: source.is_adult || false,
+        }));
+        filename = `video_sources_${timestamp}.json`;
+      }
 
       // 创建下载
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -3013,10 +3045,12 @@ const VideoSourceConfig = ({
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
+      const formatText =
+        exportFormat === 'config' ? '配置文件格式' : '数组格式';
       showAlert({
         type: 'success',
         title: '导出成功',
-        message: `已导出 ${sourcesToExport.length} 个视频源到 ${filename}`,
+        message: `已导出 ${sourcesToExport.length} 个视频源（${formatText}）到 ${filename}`,
         timer: 3000,
       });
 

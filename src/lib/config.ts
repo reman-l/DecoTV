@@ -75,18 +75,20 @@ export function refineConfig(adminConfig: AdminConfig): AdminConfig {
   apiSitesFromFile.forEach(([key, site]) => {
     const existingSource = currentApiSites.get(key);
     if (existingSource) {
-      // 如果已存在，只覆盖 name、api、detail 和 from
+      // 如果已存在,只覆盖 name、api、detail、is_adult 和 from
       existingSource.name = site.name;
       existingSource.api = site.api;
       existingSource.detail = site.detail;
+      existingSource.is_adult = site.is_adult || false;
       existingSource.from = 'config';
     } else {
-      // 如果不存在，创建新条目
+      // 如果不存在,创建新条目
       currentApiSites.set(key, {
         key,
         name: site.name,
         api: site.api,
         detail: site.detail,
+        is_adult: site.is_adult || false,
         from: 'config',
         disabled: false,
       });
@@ -258,6 +260,7 @@ async function getInitConfig(
       name: site.name,
       api: site.api,
       detail: site.detail,
+      is_adult: site.is_adult || false,
       from: 'config',
       disabled: false,
     });
