@@ -6354,7 +6354,7 @@ function AdminPageClient() {
                       {/* 查看详细指南按钮 */}
                       <div className='flex items-center space-x-2'>
                         <a
-                          href='/docs/成人内容过滤使用指南.md'
+                          href='https://github.com/Decohererk/DecoTV/blob/main/docs/%E6%88%90%E4%BA%BA%E5%86%85%E5%AE%B9%E8%BF%87%E6%BB%A4%E4%BD%BF%E7%94%A8%E6%8C%87%E5%8D%97.md'
                           target='_blank'
                           rel='noopener noreferrer'
                           className='inline-flex items-center space-x-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-xs font-medium rounded-md transition-all transform hover:scale-105 shadow-sm'
