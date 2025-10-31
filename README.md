@@ -362,21 +362,45 @@ dockge/komodo 等 docker compose UI 也有自动更新功能
 <details>
 <summary>点击查看 OrionTV 过滤配置示例</summary>
 
-### 家庭安全模式（推荐家庭使用）
+### 🎯 推荐方式：使用路径前缀
+
+#### 家庭安全模式（推荐家庭使用）
+
+```
+API 地址: https://your-domain.com/
+```
+
+✅ 自动过滤成人资源源和敏感关键词
+
+#### 完整内容模式（成人用户）
+
+```
+API 地址: https://your-domain.com/adult/
+```
+
+✅ 显示所有内容（包括成人资源）
+
+> 💡 **工作原理**:
+>
+> - 路径前缀 `/adult/` 会被自动识别并重写
+> - 例如: `/adult/api/search` → `/api/search?adult=1`
+> - OrionTV 无需额外配置，开箱即用
+
+### 备用方式：使用 URL 参数
+
+**注意**: 此方式仅适用于 Web 端，OrionTV 可能不支持
+
+#### 家庭安全模式
 
 ```
 API 地址: https://your-domain.com
 ```
 
-✅ 自动过滤成人资源源和敏感关键词
-
-### 完整内容模式（成人用户）
+#### 完整内容模式
 
 ```
 API 地址: https://your-domain.com?adult=1
 ```
-
-✅ 显示所有内容（包括成人资源）
 
 详细说明请参阅 [成人内容过滤使用指南](./docs/成人内容过滤使用指南.md)
 
