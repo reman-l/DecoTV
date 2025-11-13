@@ -317,7 +317,8 @@ export async function getConfig(): Promise<AdminConfig> {
   }
   adminConfig = configSelfCheck(adminConfig);
   cachedConfig = adminConfig;
-  db.saveAdminConfig(cachedConfig);
+  // 🐛 修复: 确保配置保存完成后再返回
+  await db.saveAdminConfig(cachedConfig);
   return cachedConfig;
 }
 
