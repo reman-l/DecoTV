@@ -122,9 +122,43 @@ export async function GET(req: NextRequest) {
     const { searchParams, href } = new URL(req.url);
     const format = searchParams.get('format') || 'json';
     const mode = (searchParams.get('mode') || '').toLowerCase(); // 可选: safe|min|yingshicang
-    console.log('[TVBox] request:', href, 'format:', format, 'mode:', mode);
+
+    // 🔒 成人内容过滤参数
+    const filterParam = searchParams.get('filter'); // on|off
+    const adultParam = searchParams.get('adult'); // 0|1
+
+    // 🎯 智能搜索代理控制（默认启用）
+    const proxyParam = searchParams.get('proxy'); // off 表示禁用代理，直连原始API
+    const useSmartProxy = proxyParam !== 'off' && proxyParam !== 'disable'; // 默认启用
+
+    console.log(
+      '[TVBox] request:',
+      href,
+      'format:',
+      format,
+      'mode:',
+      mode,
+      'filter:',
+      filterParam,
+      'proxy:',
+      useSmartProxy
+    );
 
     const cfg = await getConfig();
+
+    // 确定是否应该过滤成人内容
+    // URL 参数优先级: ?filter=off (禁用过滤) > ?adult=1 (启用成人) > 全局配置
+    let shouldFilterAdult = !cfg.SiteConfig.DisableYellowFilter; // 默认使用全局配置
+
+    if (filterParam === 'off' || filterParam === 'disable') {
+      shouldFilterAdult = false; // 禁用过滤 = 显示成人内容
+    } else if (filterParam === 'on' || filterParam === 'enable') {
+      shouldFilterAdult = true; // 启用过滤 = 隐藏成人内容
+    } else if (adultParam === '1' || adultParam === 'true') {
+      shouldFilterAdult = false; // 显式启用成人内容
+    } else if (adultParam === '0' || adultParam === 'false') {
+      shouldFilterAdult = true; // 显式禁用成人内容
+    }
 
     const forceSpiderRefresh = searchParams.get('forceSpiderRefresh') === '1';
 
@@ -203,125 +237,156 @@ export async function GET(req: NextRequest) {
       globalSpiderJar = selectedStrategy[timeBasedIndex];
     }
 
-    const sites = (cfg.SourceConfig || [])
-      .filter((s) => !s.disabled)
-      .map((s) => {
-        const apiType = detectApiType(s.api);
-        const site: any = {
-          key: s.key,
-          name: s.name,
-          type: apiType,
-          api: s.api,
-          // 根据API类型优化配置
-          searchable: apiType === 3 ? 1 : 1, // CSP源通常支持搜索
-          quickSearch: apiType === 3 ? 1 : 1, // 快速搜索
-          filterable: apiType === 3 ? 1 : 1, // 筛选功能
-          changeable: 1, // 允许换源
+    // 🔒 根据过滤设置筛选视频源
+    let sourcesToUse = (cfg.SourceConfig || []).filter((s) => !s.disabled);
+
+    if (shouldFilterAdult) {
+      // 过滤掉成人资源源
+      sourcesToUse = sourcesToUse.filter((s) => !s.is_adult);
+      console.log(
+        `[TVBox] Adult filter enabled, filtered ${
+          cfg.SourceConfig.length - sourcesToUse.length
+        } adult sources`
+      );
+    } else {
+      console.log(
+        `[TVBox] Adult filter disabled, returning all ${sourcesToUse.length} sources`
+      );
+    }
+
+    const sites = sourcesToUse.map((s) => {
+      const apiType = detectApiType(s.api);
+      const site: any = {
+        key: s.key,
+        name: s.name,
+        type: apiType,
+        api: s.api,
+        // 根据API类型优化配置
+        searchable: apiType === 3 ? 1 : 1, // CSP源通常支持搜索
+        quickSearch: apiType === 3 ? 1 : 1, // 快速搜索
+        filterable: apiType === 3 ? 1 : 1, // 筛选功能
+        changeable: 1, // 允许换源
+      };
+
+      // 🎯 默认启用智能搜索代理（解决TVBox搜索不精确问题）
+      // 只代理普通采集源（type 0, 1），CSP源保持原样
+      if (useSmartProxy && (apiType === 0 || apiType === 1)) {
+        const requestUrl = new URL(req.url);
+        const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
+
+        // 保存原始API供代理使用
+        site.original_api = site.api;
+
+        // 替换为智能搜索代理端点
+        // TVBox会在URL后拼接搜索关键词，格式：api + wd={keyword}
+        site.api = `${baseUrl}/api/tvbox/search?source=${encodeURIComponent(
+          s.key
+        )}&filter=${shouldFilterAdult ? 'on' : 'off'}&wd=`;
+
+        console.log(`[TVBox] Enabled smart proxy for source: ${s.key}`);
+      }
+
+      // 优化：根据不同API类型设置请求头，提升稳定性和切换体验
+      if (apiType === 0 || apiType === 1) {
+        // 苹果CMS接口优化配置
+        site.header = {
+          'User-Agent':
+            'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
+          Accept: 'application/json, text/plain, */*',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+          'Cache-Control': 'no-cache',
+          Connection: 'close', // 避免连接复用问题
         };
 
-        // 优化：根据不同API类型设置请求头，提升稳定性和切换体验
-        if (apiType === 0 || apiType === 1) {
-          // 苹果CMS接口优化配置
-          site.header = {
-            'User-Agent':
-              'Mozilla/5.0 (Linux; Android 11; SM-G973F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Mobile Safari/537.36',
-            Accept: 'application/json, text/plain, */*',
-            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
-            'Cache-Control': 'no-cache',
-            Connection: 'close', // 避免连接复用问题
-          };
-
-          // 优化搜索参数配置
-          if (!s.api.includes('?')) {
-            if (apiType === 1) {
-              // JSON接口标准参数
-              site.api = s.api + (s.api.endsWith('/') ? '' : '/') + '?ac=list';
-            }
-          }
-
-          // 增加超时和重试配置
-          site.timeout = 10000; // 10秒超时
-          site.retry = 2; // 重试2次
-        } else if (apiType === 3) {
-          // CSP源优化配置
-          site.header = {
-            'User-Agent': 'okhttp/3.15',
-            Accept: '*/*',
-            Connection: 'close',
-          };
-
-          // CSP源通常更稳定，设置更长超时
-          site.timeout = 15000; // 15秒超时
-          site.retry = 1; // 重试1次
-        }
-
-        // 解析 detail 扩展配置
-        const detail = (s.detail || '').trim();
-        if (detail) {
-          try {
-            const obj = JSON.parse(detail);
-            if (obj && typeof obj === 'object') {
-              // 更新站点配置
-              if (obj.type !== undefined) {
-                site.type = Number(obj.type);
-                // 重新设置对应的请求头
-                if (site.type === 3) {
-                  site.header = { 'User-Agent': 'okhttp/3.15' };
-                }
-              }
-              if (obj.api) site.api = obj.api;
-
-              // 处理ext配置
-              if (obj.ext !== undefined) {
-                site.ext =
-                  typeof obj.ext === 'string'
-                    ? obj.ext
-                    : JSON.stringify(obj.ext);
-              }
-
-              // 搜索相关配置
-              if (obj.searchable !== undefined)
-                site.searchable = Number(obj.searchable);
-              if (obj.quickSearch !== undefined)
-                site.quickSearch = Number(obj.quickSearch);
-              if (obj.filterable !== undefined)
-                site.filterable = Number(obj.filterable);
-              if (obj.playUrl !== undefined) site.playUrl = obj.playUrl;
-
-              // jar配置处理
-              if (obj.jar) {
-                const jarUrl = obj.jar.trim();
-                if (jarUrl.startsWith('http')) {
-                  site.jar = jarUrl;
-                  globalSpiderJar = jarUrl;
-                }
-              }
-
-              // 处理自定义请求头
-              if (obj.header && typeof obj.header === 'object') {
-                site.header = { ...site.header, ...obj.header };
-              }
-            }
-          } catch {
-            // 如果不是JSON，作为ext字符串处理
-            site.ext = detail;
+        // 优化搜索参数配置
+        if (!s.api.includes('?')) {
+          if (apiType === 1) {
+            // JSON接口标准参数
+            site.api = s.api + (s.api.endsWith('/') ? '' : '/') + '?ac=list';
           }
         }
 
-        // 最终类型检查和修正
-        if (
-          typeof site.api === 'string' &&
-          site.api.toLowerCase().startsWith('csp_')
-        ) {
-          site.type = 3;
-          site.header = { 'User-Agent': 'okhttp/3.15' };
+        // 增加超时和重试配置
+        site.timeout = 10000; // 10秒超时
+        site.retry = 2; // 重试2次
+      } else if (apiType === 3) {
+        // CSP源优化配置
+        site.header = {
+          'User-Agent': 'okhttp/3.15',
+          Accept: '*/*',
+          Connection: 'close',
+        };
+
+        // CSP源通常更稳定，设置更长超时
+        site.timeout = 15000; // 15秒超时
+        site.retry = 1; // 重试1次
+      }
+
+      // 解析 detail 扩展配置
+      const detail = (s.detail || '').trim();
+      if (detail) {
+        try {
+          const obj = JSON.parse(detail);
+          if (obj && typeof obj === 'object') {
+            // 更新站点配置
+            if (obj.type !== undefined) {
+              site.type = Number(obj.type);
+              // 重新设置对应的请求头
+              if (site.type === 3) {
+                site.header = { 'User-Agent': 'okhttp/3.15' };
+              }
+            }
+            if (obj.api) site.api = obj.api;
+
+            // 处理ext配置
+            if (obj.ext !== undefined) {
+              site.ext =
+                typeof obj.ext === 'string' ? obj.ext : JSON.stringify(obj.ext);
+            }
+
+            // 搜索相关配置
+            if (obj.searchable !== undefined)
+              site.searchable = Number(obj.searchable);
+            if (obj.quickSearch !== undefined)
+              site.quickSearch = Number(obj.quickSearch);
+            if (obj.filterable !== undefined)
+              site.filterable = Number(obj.filterable);
+            if (obj.playUrl !== undefined) site.playUrl = obj.playUrl;
+
+            // jar配置处理
+            if (obj.jar) {
+              const jarUrl = obj.jar.trim();
+              if (jarUrl.startsWith('http')) {
+                site.jar = jarUrl;
+                globalSpiderJar = jarUrl;
+              }
+            }
+
+            // 处理自定义请求头
+            if (obj.header && typeof obj.header === 'object') {
+              site.header = { ...site.header, ...obj.header };
+            }
+          }
+        } catch {
+          // 如果不是JSON，作为ext字符串处理
+          site.ext = detail;
         }
+      }
 
-        // 确保必要字段存在
-        if (!site.ext) site.ext = '';
+      // 最终类型检查和修正
+      if (
+        typeof site.api === 'string' &&
+        site.api.toLowerCase().startsWith('csp_')
+      ) {
+        site.type = 3;
+        site.header = { 'User-Agent': 'okhttp/3.15' };
+      }
 
-        return site;
-      });
+      // 确保必要字段存在
+      if (!site.ext) site.ext = '';
+
+      return site;
+    });
 
     // 构建直播配置
     const lives = (cfg.LiveConfig || [])
