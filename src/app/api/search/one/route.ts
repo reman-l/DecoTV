@@ -51,9 +51,16 @@ export async function GET(request: NextRequest) {
 
     const results = await searchFromApi(targetSite, query);
     let result = results.filter((r) => r.title === query);
+
+    // 成人内容过滤
     if (!config.SiteConfig.DisableYellowFilter) {
-      result = result.filter((result) => {
-        const typeName = result.type_name || '';
+      result = result.filter((r) => {
+        const typeName = r.type_name || '';
+        // 检查源是否标记为成人资源
+        if (targetSite.is_adult) {
+          return false;
+        }
+        // 检查分类名称关键词
         return !yellowWords.some((word: string) => typeName.includes(word));
       });
     }

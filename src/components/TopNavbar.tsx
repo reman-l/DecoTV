@@ -36,7 +36,7 @@ export default function TopNavbar() {
                 href='/'
                 className='shrink-0 select-none hover:opacity-90 transition-opacity'
               >
-                <span className='text-lg font-extrabold tracking-tight neon-text'>
+                <span className='text-xl font-black tracking-tight deco-brand'>
                   {siteName || 'DecoTV'}
                 </span>
               </Link>
