@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "pnpm gen:manifest && next dev -H 0.0.0.0",
-    "build": "pnpm gen:manifest && next build",
+    "build": "pnpm gen:manifest && pnpm copy:version && next build",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "eslint src --fix && pnpm format",
@@ -15,9 +15,10 @@
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "gen:manifest": "node scripts/generate-manifest.js",
+    "copy:version": "node -e \"require('fs').copyFileSync('VERSION.txt', 'public/VERSION.txt')\"",
     "postbuild": "echo 'Build completed - sitemap generation disabled'",
     "prepare": "husky install",
-    "vercel-build": "pnpm gen:manifest && next build",
+    "vercel-build": "pnpm gen:manifest && pnpm copy:version && next build",
     "docker:build": "docker build -t decotv .",
     "docker:run": "docker run -p 3000:3000 decotv"
   },
