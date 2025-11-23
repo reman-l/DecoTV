@@ -67,17 +67,26 @@ export async function GET(request: NextRequest) {
     normalizedQuery = query;
   }
 
+  // 准备搜索关键词列表：如果转换后的关键词与原词不同，则同时搜索两者
+  const searchQueries = [normalizedQuery];
+  if (query && normalizedQuery !== query) {
+    searchQueries.push(query);
+  }
+
   // 添加超时控制和错误处理，避免慢接口拖累整体响应
-  const searchPromises = apiSites.map((site) =>
-    Promise.race([
-      searchFromApi(site, normalizedQuery),
-      new Promise((_, reject) =>
-        setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
-      ),
-    ]).catch((err) => {
-      console.warn(`搜索失败 ${site.name}:`, err.message);
-      return []; // 返回空数组而不是抛出错误
-    })
+  // 对每个站点，尝试搜索所有关键词
+  const searchPromises = apiSites.flatMap((site) =>
+    searchQueries.map((q) =>
+      Promise.race([
+        searchFromApi(site, q),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
+        ),
+      ]).catch((err) => {
+        console.warn(`搜索失败 ${site.name} (query: ${q}):`, err.message);
+        return []; // 返回空数组而不是抛出错误
+      })
+    )
   );
 
   try {
@@ -86,6 +95,16 @@ export async function GET(request: NextRequest) {
       .filter((result) => result.status === 'fulfilled')
       .map((result) => (result as PromiseFulfilledResult<any>).value);
     let flattenedResults = successResults.flat();
+
+    // 去重：根据 source 和 id 去重
+    const uniqueResultsMap = new Map<string, any>();
+    flattenedResults.forEach((item) => {
+      const key = `${item.source}|${item.id}`;
+      if (!uniqueResultsMap.has(key)) {
+        uniqueResultsMap.set(key, item);
+      }
+    });
+    flattenedResults = Array.from(uniqueResultsMap.values());
 
     // 🔒 成人内容过滤逻辑
     // shouldFilterAdult=true 表示启用过滤(过滤成人内容)
