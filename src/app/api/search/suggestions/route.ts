@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { AdminConfig } from '@/lib/admin.types';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { toSimplified } from '@/lib/chinese';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
@@ -26,10 +27,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ suggestions: [] });
     }
 
+    // 繁体转简体
+    let normalizedQuery = query;
+    try {
+      normalizedQuery = await toSimplified(query);
+    } catch (e) {
+      console.warn('繁体转简体失败', e);
+    }
+
     // 生成建议
     const suggestions = await generateSuggestions(
       config,
-      query,
+      normalizedQuery,
       authInfo.username
     );
 

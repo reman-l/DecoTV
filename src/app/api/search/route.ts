@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { toSimplified } from '@/lib/chinese';
 import { getAvailableApiSites, getCacheTime, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { rankSearchResults } from '@/lib/search-ranking';
@@ -55,10 +56,21 @@ export async function GET(request: NextRequest) {
     shouldFilterAdult = true; // 启用过滤 = 隐藏成人内容
   }
 
+  // 将搜索关键词规范化为简体中文，提升繁体用户搜索体验
+  let normalizedQuery = query;
+  try {
+    if (query) {
+      normalizedQuery = await toSimplified(query);
+    }
+  } catch (e) {
+    console.warn('繁体转简体失败，使用原始关键词', (e as any)?.message || e);
+    normalizedQuery = query;
+  }
+
   // 添加超时控制和错误处理，避免慢接口拖累整体响应
   const searchPromises = apiSites.map((site) =>
     Promise.race([
-      searchFromApi(site, query),
+      searchFromApi(site, normalizedQuery),
       new Promise((_, reject) =>
         setTimeout(() => reject(new Error(`${site.name} timeout`)), 20000)
       ),
@@ -94,8 +106,11 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 🎯 智能排序：按相关性对搜索结果排序
-    flattenedResults = rankSearchResults(flattenedResults, query);
+    // 🎯 智能排序：按相关性对搜索结果排序（使用规范化关键词）
+    flattenedResults = rankSearchResults(
+      flattenedResults,
+      normalizedQuery || query
+    );
 
     const cacheTime = await getCacheTime();
 
