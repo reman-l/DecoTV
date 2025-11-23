@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { results: flattenedResults },
+      { results: flattenedResults, normalizedQuery },
       {
         headers: {
           'Cache-Control': `public, max-age=${cacheTime}, s-maxage=${cacheTime}`,
