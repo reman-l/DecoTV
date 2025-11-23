@@ -10,6 +10,7 @@ import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // 强制动态渲染，避免构建时静态生成报错
 
 export async function GET(request: NextRequest) {
   try {
