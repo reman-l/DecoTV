@@ -98,6 +98,20 @@
 
 本项目**仅支持 Docker 或其他基于 Docker 的平台** 部署。
 
+### 🧩 OpenWrt 部署
+
+如果你计划运行在 OpenWrt（软路由 / ARM 盒子 / 树莓派等）设备上，参阅完整指南：
+
+👉 [OpenWrt 部署指南](./docs/OpenWrt部署指南.md)
+
+快速拉取预构建镜像：
+
+```bash
+docker pull ghcr.io/decohererk/decotv:latest
+```
+
+若需在外部主机自行构建后再导入至 OpenWrt，请参考指南中的 “获取或构建镜像” 与 “导出并传输” 步骤。
+
 ### 📦 Docker 镜像标签
 
 DecoTV 提供以下 Docker 镜像标签：
