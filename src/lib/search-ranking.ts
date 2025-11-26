@@ -96,22 +96,12 @@ export function calculateRelevanceScore(
   else if (title.includes(keyword) || titleNoSpace.includes(keywordNoSpace)) {
     score = 60;
   }
-  // 4. 模糊匹配
-  else {
-    // 4.1 检查是否包含关键词的所有字符（按顺序）
-    if (containsCharsInOrder(titleNoSpace, keywordNoSpace)) {
-      // 计算字符间隔程度，间隔越小分数越高
-      const similarity = similarityScore(titleNoSpace, keywordNoSpace);
-      score = 20 + similarity * 20; // 20-40分
-    }
-    // 4.2 检查是否包含关键词的部分字符
-    else {
-      const matchedChars = keywordNoSpace
-        .split('')
-        .filter((char) => titleNoSpace.includes(char)).length;
-      const matchRatio = matchedChars / keywordNoSpace.length;
-      score = matchRatio * 15; // 0-15分
-    }
+  // 4. 模糊匹配（保持字符顺序）
+  else if (containsCharsInOrder(titleNoSpace, keywordNoSpace)) {
+    const similarity = similarityScore(titleNoSpace, keywordNoSpace);
+    score = 20 + similarity * 20; // 20-40分
+  } else {
+    score = 0;
   }
 
   // 5. 年份加分（最新的作品加分，最多+10分）
@@ -172,8 +162,11 @@ export function rankSearchResults(
     return a.result.title.localeCompare(b.result.title);
   });
 
+  const filtered = scoredResults.filter((item) => item.score > 0);
+  const finalResults = filtered.length > 0 ? filtered : scoredResults;
+
   // 返回排序后的结果
-  return scoredResults.map((item) => item.result);
+  return finalResults.map((item) => item.result);
 }
 
 /**
