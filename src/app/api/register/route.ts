@@ -1,7 +1,7 @@
 /* eslint-disable no-console */
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getConfig } from '@/lib/config';
+import { getConfig, setCachedConfig } from '@/lib/config';
 import { db } from '@/lib/db';
 
 export const runtime = 'nodejs';
@@ -271,21 +271,8 @@ export async function POST(req: NextRequest) {
 
       // 保存配置
       try {
-        const saveResponse = await fetch(
-          `${req.nextUrl.origin}/api/admin/config`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(config),
-          }
-        );
-
-        if (!saveResponse.ok) {
-          console.error('保存用户配置失败');
-          // 不影响注册流程，只记录日志
-        }
+        await db.saveAdminConfig(config);
+        await setCachedConfig(config);
       } catch (error) {
         console.error('保存用户配置异常:', error);
         // 不影响注册流程
