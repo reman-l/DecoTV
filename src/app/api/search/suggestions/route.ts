@@ -4,11 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { AdminConfig } from '@/lib/admin.types';
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { toSimplified } from '@/lib/chinese';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic'; // 强制动态渲染，避免构建时静态生成报错
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,8 +28,20 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ suggestions: [] });
     }
 
+    // 繁体转简体
+    let normalizedQuery = query;
+    try {
+      normalizedQuery = await toSimplified(query);
+    } catch (e) {
+      console.warn('繁体转简体失败', e);
+    }
+
     // 生成建议
-    const suggestions = await generateSuggestions(config, query, authInfo.username);
+    const suggestions = await generateSuggestions(
+      config,
+      normalizedQuery,
+      authInfo.username
+    );
 
     // 从配置中获取缓存时间，如果没有配置则使用默认值300秒（5分钟）
     const cacheTime = config.SiteConfig.SiteInterfaceCacheTime || 300;
@@ -49,7 +63,11 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function generateSuggestions(config: AdminConfig, query: string, username: string): Promise<
+async function generateSuggestions(
+  config: AdminConfig,
+  query: string,
+  username: string
+): Promise<
   Array<{
     text: string;
     type: 'exact' | 'related' | 'suggestion';
@@ -69,7 +87,16 @@ async function generateSuggestions(config: AdminConfig, query: string, username:
     realKeywords = Array.from(
       new Set(
         results
-          .filter((r: any) => config.SiteConfig.DisableYellowFilter || !yellowWords.some((word: string) => (r.type_name || '').includes(word)))
+          .filter((r: any) => {
+            // 成人内容过滤
+            if (!config.SiteConfig.DisableYellowFilter) {
+              if (firstSite.is_adult) return false;
+              const typeName = r.type_name || '';
+              if (yellowWords.some((word: string) => typeName.includes(word)))
+                return false;
+            }
+            return true;
+          })
           .map((r: any) => r.title)
           .filter(Boolean)
           .flatMap((title: string) => title.split(/[ -:：·、-]/))

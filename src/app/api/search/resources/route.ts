@@ -2,8 +2,9 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { resolveAdultFilter } from '@/lib/adult-filter';
 import { getAuthInfoFromCookie } from '@/lib/auth';
-import { getAvailableApiSites } from '@/lib/config';
+import { getAvailableApiSites, getConfig } from '@/lib/config';
 
 export const runtime = 'nodejs';
 
@@ -15,13 +16,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const apiSites = await getAvailableApiSites(authInfo.username);
+    const { searchParams } = new URL(request.url);
+    const config = await getAvailableApiSites(authInfo.username);
+    const globalConfig = await getConfig();
+
+    const shouldFilterAdult = resolveAdultFilter(
+      searchParams,
+      globalConfig.SiteConfig.DisableYellowFilter
+    );
+
+    const apiSites = shouldFilterAdult
+      ? config.filter((site) => !site.is_adult)
+      : config;
 
     return NextResponse.json(apiSites, {
       headers: {
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type, Cookie',
+        'X-Adult-Filter': shouldFilterAdult ? 'enabled' : 'disabled', // 调试信息
       },
     });
   } catch (error) {
