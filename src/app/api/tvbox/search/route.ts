@@ -9,6 +9,20 @@ import { yellowWords } from '@/lib/yellow';
 
 export const runtime = 'nodejs';
 
+const normalizedYellowWords = yellowWords.map((word) => word.toLowerCase());
+
+const containsYellowKeyword = (
+  ...fields: Array<string | undefined | null>
+): boolean => {
+  return fields.some((field) => {
+    if (!field) return false;
+    const normalized = field.toLowerCase();
+    return normalizedYellowWords.some((keyword) =>
+      normalized.includes(keyword)
+    );
+  });
+};
+
 /**
  * TVBox 智能搜索代理端点
  *
@@ -33,7 +47,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const sourceKey = searchParams.get('source');
     const query = searchParams.get('wd');
-    const filterParam = searchParams.get('filter') || 'on';
+    const filterParam = (searchParams.get('filter') || 'on').toLowerCase();
     const strictMode = searchParams.get('strict') === '1';
 
     // 参数验证
@@ -49,7 +63,7 @@ export async function GET(request: NextRequest) {
     }
 
     const config = await getConfig();
-    const shouldFilter = filterParam === 'on' || filterParam === 'enable';
+    const shouldFilter = ['on', 'enable', '1', 'true'].includes(filterParam);
 
     // 查找视频源配置
     const targetSource = config.SourceConfig.find((s) => s.key === sourceKey);
@@ -80,6 +94,33 @@ export async function GET(request: NextRequest) {
       `[TVBox Search Proxy] source=${sourceKey}, query="${query}", filter=${filterParam}, strict=${strictMode}`
     );
 
+    if (shouldFilter && targetSource.is_adult) {
+      console.warn(
+        `[TVBox Search Proxy] source=${sourceKey} blocked by adult policy`
+      );
+      return NextResponse.json(
+        {
+          code: 1,
+          msg: '该视频源已被成人内容过滤策略禁用',
+          page: 1,
+          pagecount: 1,
+          limit: 0,
+          total: 0,
+          list: [],
+        },
+        {
+          status: 200,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Cache-Control': 'public, max-age=60, s-maxage=60',
+            'X-Filter-Applied': 'true',
+          },
+        }
+      );
+    }
+
     // 从上游API搜索
     let results = await searchFromApi(
       {
@@ -102,13 +143,18 @@ export async function GET(request: NextRequest) {
       results = results.filter((result) => {
         const typeName = result.type_name || '';
 
-        // 1. 检查源是否标记为成人资源
         if (targetSource.is_adult) {
           return false;
         }
 
-        // 2. 检查分类名称是否包含敏感关键词
-        if (yellowWords.some((word: string) => typeName.includes(word))) {
+        if (
+          containsYellowKeyword(
+            typeName,
+            result.title,
+            result.desc,
+            result.source_name
+          )
+        ) {
           return false;
         }
 
