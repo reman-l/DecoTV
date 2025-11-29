@@ -31,12 +31,6 @@ function isOrionClient(request: NextRequest): boolean {
   return ua.includes('orion') || client === 'orion' || client === 'oriontv';
 }
 
-function isAdultSourceName(name?: string | null): boolean {
-  if (!name) return false;
-  const n = name.trim().toLowerCase();
-  return n.startsWith('av-');
-}
-
 /**
  * TVBox 智能搜索代理端点
  *
@@ -78,6 +72,14 @@ export async function GET(request: NextRequest) {
     }
 
     const config = await getConfig();
+    const adultSourceKeys = new Set(
+      config.SourceConfig.filter((s) => s.is_adult).map((s) => s.key)
+    );
+    const adultSourceNames = new Set(
+      config.SourceConfig.filter((s) => s.is_adult && s.name).map((s) =>
+        s.name.trim().toLowerCase()
+      )
+    );
     const siteDefaultFilter = true; // 站点默认开启成人过滤
     const shouldFilter =
       ['on', 'enable', '1', 'true', 'yes'].includes(filterParam) ||
@@ -110,18 +112,14 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(
-      `[TVBox Search Proxy] source=${sourceKey}, query="${query}", filter=${filterParam}, strict=${strictMode}`
+      `[TVBox Search Proxy] source=${sourceKey}, query="${query}", filter=${filterParam}, strict=${strictMode}, client=${
+        isOrion ? 'orion' : 'generic'
+      }`
     );
 
-    if (
-      shouldFilter &&
-      (targetSource.is_adult ||
-        (isOrion && isAdultSourceName(targetSource.name)))
-    ) {
+    if (shouldFilter && targetSource.is_adult) {
       console.warn(
-        `[TVBox Search Proxy] source=${sourceKey} blocked by adult policy${
-          isOrion ? ' (orion client)' : ''
-        }`
+        `[TVBox Search Proxy] source=${sourceKey} blocked by adult policy`
       );
       return NextResponse.json(
         {
@@ -170,12 +168,14 @@ export async function GET(request: NextRequest) {
         const title = result.title || '';
         const desc = result.desc || '';
         const srcName = result.source_name || '';
+        const srcKey = result.source || '';
 
-        // 整源拦截：源被标记为成人，或 Orion 下源名为 AV-
-        if (
+        const matchedAdultSource =
           targetSource.is_adult ||
-          (isOrion && isAdultSourceName(targetSource.name))
-        ) {
+          adultSourceKeys.has(srcKey) ||
+          adultSourceNames.has(srcName.trim().toLowerCase());
+
+        if (matchedAdultSource) {
           return false;
         }
 
