@@ -23,6 +23,20 @@ const containsYellowKeyword = (
   });
 };
 
+function isOrionClient(request: NextRequest): boolean {
+  const ua = (request.headers.get('user-agent') || '').toLowerCase();
+  const client = (
+    new URL(request.url).searchParams.get('client') || ''
+  ).toLowerCase();
+  return ua.includes('orion') || client === 'orion' || client === 'oriontv';
+}
+
+function isAdultSourceName(name?: string | null): boolean {
+  if (!name) return false;
+  const n = name.trim().toLowerCase();
+  return n.startsWith('av-');
+}
+
 /**
  * TVBox 智能搜索代理端点
  *
@@ -47,7 +61,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const sourceKey = searchParams.get('source');
     const query = searchParams.get('wd');
-    const filterParam = (searchParams.get('filter') || 'on').toLowerCase();
+    const filterRaw = searchParams.get('filter');
+    const filterParam = (filterRaw ?? 'on').toLowerCase();
     const strictMode = searchParams.get('strict') === '1';
 
     // 参数验证
@@ -63,7 +78,11 @@ export async function GET(request: NextRequest) {
     }
 
     const config = await getConfig();
-    const shouldFilter = ['on', 'enable', '1', 'true'].includes(filterParam);
+    const siteDefaultFilter = true; // 站点默认开启成人过滤
+    const shouldFilter =
+      ['on', 'enable', '1', 'true', 'yes'].includes(filterParam) ||
+      (filterRaw == null && siteDefaultFilter);
+    const isOrion = isOrionClient(request);
 
     // 查找视频源配置
     const targetSource = config.SourceConfig.find((s) => s.key === sourceKey);
@@ -94,9 +113,15 @@ export async function GET(request: NextRequest) {
       `[TVBox Search Proxy] source=${sourceKey}, query="${query}", filter=${filterParam}, strict=${strictMode}`
     );
 
-    if (shouldFilter && targetSource.is_adult) {
+    if (
+      shouldFilter &&
+      (targetSource.is_adult ||
+        (isOrion && isAdultSourceName(targetSource.name)))
+    ) {
       console.warn(
-        `[TVBox Search Proxy] source=${sourceKey} blocked by adult policy`
+        `[TVBox Search Proxy] source=${sourceKey} blocked by adult policy${
+          isOrion ? ' (orion client)' : ''
+        }`
       );
       return NextResponse.json(
         {
@@ -136,25 +161,26 @@ export async function GET(request: NextRequest) {
       `[TVBox Search Proxy] Fetched ${results.length} results from upstream`
     );
 
-    // 🔒 成人内容过滤
+    // 🔒 成人内容过滤（Orion 客户端下更严格）
     if (shouldFilter) {
       const beforeFilterCount = results.length;
 
       results = results.filter((result) => {
         const typeName = result.type_name || '';
+        const title = result.title || '';
+        const desc = result.desc || '';
+        const srcName = result.source_name || '';
 
-        if (targetSource.is_adult) {
+        // 整源拦截：源被标记为成人，或 Orion 下源名为 AV-
+        if (
+          targetSource.is_adult ||
+          (isOrion && isAdultSourceName(targetSource.name))
+        ) {
           return false;
         }
 
-        if (
-          containsYellowKeyword(
-            typeName,
-            result.title,
-            result.desc,
-            result.source_name
-          )
-        ) {
+        // 关键词拦截：扩大到 type_name/title/desc/source_name
+        if (containsYellowKeyword(typeName, title, desc, srcName)) {
           return false;
         }
 
